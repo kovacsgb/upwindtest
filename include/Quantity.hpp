@@ -37,6 +37,11 @@ public:
     Euler &operator=(Euler const &) = default;
     Euler &operator=(Euler &&) = default;
     virtual ~Euler() = default;
+    Euler(double r, double p, double e) : Quantity<3>() {
+        data[0] = r;
+        data[1] = p;
+        data[2] = e;
+    }
     double getrho() { return data[0]; }
     double getu() { return data[1] / data[0]; }
     double getp() { return (data[2] - 0.5 * data[1] * data[1] / data[0]) * (2./3.); }
