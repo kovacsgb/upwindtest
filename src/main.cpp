@@ -2,6 +2,7 @@
 #include "Grid.hpp"
 #include "Quantity.hpp"
 #include <cmath>
+#include <fstream>
 
 
 Quantity<3>* f(double x, std::vector<double> params)
@@ -23,12 +24,16 @@ int main() {
     std::vector<double> params = {1.0, 0.5, 0.1};
     grid.setupY(f, params);
 
+    std::cout << (Euler{1,1,1} / Euler{2,2,2})[0];
+
+    std::ofstream output{"out.txt"};
+
     for (int i = 0; i < grid.size(); i++)
     {
         //std::cout << "Hello, World!" << std::endl;
         Euler euler = grid.getY<Euler>(i);
         //std::cout << "Hello, World!" << std::endl;
-        std::cout << grid.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp() << std::endl;
+        output << grid.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp() << std::endl;
     }
     std::cout << "Hello, World!" << std::endl;
     return 0;

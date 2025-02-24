@@ -20,6 +20,69 @@ public:
     {
         return data[i];
     }
+
+    // Addition operator
+    Quantity<N> operator+(const Quantity<N>& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] + other.data[i];
+        }
+        return result;
+    }
+
+    // Subtraction operator
+    Quantity<N> operator-(const Quantity<N>& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] - other.data[i];
+        }
+        return result;
+    }
+
+    Quantity<N> operator*(const Quantity<N>& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] * other.data[i];
+        }
+        return result;
+    }
+
+    Quantity<N> operator/(const Quantity<N>& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] / other.data[i];
+        }
+        return result;
+    }
+
+    Quantity<N> operator*(const double& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] * other;
+        }
+        return result;
+    }
+
+    Quantity<N> operator/(const double& other) const
+    {
+        Quantity<N> result;
+        for (int i = 0; i < N; ++i)
+        {
+            result.data[i] = this->data[i] / other;
+        }
+        return result;
+    }
+
 };
 
 class Euler : public Quantity<3>
