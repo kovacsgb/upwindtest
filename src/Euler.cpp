@@ -33,10 +33,17 @@ Euler EulerEquation::SourceTerms(Euler inputval)
     return terms;
 }
 
+
+double EulerEquation::getSoundSpeed(Euler inputval)
+{
+    return sqrt(1.4*inputval.getp()/inputval.getrho());
+}
+
+/*
 std::array<Euler,1> EulerEquation::AdvectionCoeffs(Euler inputval)
 {
     Euler coeff{1,1,1};
 
     return std::array<Euler,1>{coeff};
 
-}
+}*/

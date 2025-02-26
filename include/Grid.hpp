@@ -28,7 +28,8 @@ struct Grid
         T& getY(int i);
         int size();
         double getDx();
-        
+        auto begin() { return x.begin(); }
+        auto end() { return x.end(); }
         void setupY(std::function<Quantity<M>*(double,std::vector<double>)> f, std::vector<double> params);
 };
 

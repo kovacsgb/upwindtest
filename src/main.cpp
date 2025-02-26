@@ -1,5 +1,7 @@
 #include <iostream>
 #include "Grid.hpp"
+#include "Equation.hpp"
+#include "Solver.hpp"
 #include "Quantity.hpp"
 #include <cmath>
 #include <fstream>
@@ -35,6 +37,10 @@ int main() {
         //std::cout << "Hello, World!" << std::endl;
         output << grid.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp() << std::endl;
     }
+    
+    EulerEquation equation;
+    CFL<Euler,3,1> testCFL{0.5, equation};
+    std::cout << testCFL(grid, 0.01) << std::endl;
     std::cout << "Hello, World!" << std::endl;
     return 0;
 }
