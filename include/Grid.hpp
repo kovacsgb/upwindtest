@@ -22,6 +22,29 @@ struct Grid
     public:
         Grid() = default;
         Grid(int N,double x0, double dx);
+
+        Grid(const Grid& grid_) : N(grid_.N), dx(grid_.dx), x(grid_.x)
+        {
+            y.resize(N);
+            for (const auto& i : grid_.y)
+            {
+                y.push_back((i->clone()));
+            }
+        }
+
+        Grid& operator=(const Grid& grid_)
+        {
+            N = grid_.N;
+            dx = grid_.dx;
+            x = grid_.x;
+            y.resize(N);
+            for (const auto& i : grid_.y)
+            {
+                y.push_back((i->clone()));
+            }
+            return *this;
+        }
+
         static Grid GenerateFromBorders(int N, double x0, double x1);
         double& getX(int i);
         template<typename T>

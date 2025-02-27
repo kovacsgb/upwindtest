@@ -1,3 +1,6 @@
+#ifndef SOLVER_HPP
+#define SOLVER_HPP 
+
 #include "Grid.hpp"
 //#include "Solverstep.hpp"
 #include "Equation.hpp"
@@ -36,7 +39,7 @@ public:
 };
 
 
-template <typename SolvStep, typename CFL_calc,int N>
+template <typename T, typename SolvStep, typename CFL_calc,int N>
 class Solver
 {
 private:
@@ -50,7 +53,7 @@ private:
 public:
     Solver(Grid<N> grid, double dx, CFL_calc CFL, SolvStep step_) : grid_old(grid), dx(dx), CFL(CFL) , step(step_)
     {
-        grid_new = grid_old;
+        this->grid_new  = grid_old;
     }
 
     void solve()
@@ -62,11 +65,46 @@ public:
         {
             for (int i = 0; i < grid_old.size(); i++)
             {
-                grid_new.setY(i, step(grid_old, dx, dt, i));
+                grid_new.template getY<T>(i) = step(grid_old, dx, dt, i);
             }
             grid_old = grid_new;
             t1 += dt;
         }
     }
 
+    void setT0(double t0)
+    {
+        this->t0 = t0;
+    }
+    void setT1(double t1)
+    {
+        this->t1 = t1;
+    }
+    double getT0()
+    {
+        return t0;
+    }
+    double getT1()
+    {
+        return t1;
+    }
+    Grid<N>& getGrid()
+    {
+        return grid_old;
+    }
+    void setGrid(Grid<N>& grid)
+    {
+        grid_old = grid;
+    }
+    double getDx()
+    {
+        return dx;
+    }
+    void setDx(double dx)
+    {
+        this->dx = dx;
+    }
+
 };
+
+#endif // SOLVER_HPP
