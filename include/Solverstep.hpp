@@ -15,6 +15,7 @@ class Solverstep
     public:
     Solverstep(Flux<T,N,M>& Fluxterm, EquationBase<T,M>& equation) : Fluxterm(Fluxterm), equation(equation) {}
     virtual T operator()(Grid<N>& grid_old, double dx, double dt, int i) = 0;
+    virtual EquationBase<T,M>& getEquation() { return equation; }
 };
 
 
@@ -28,7 +29,7 @@ class explicitStep : public Solverstep<T,N,M>
     T operator()(Grid<N>& grid_old, double dx, double dt, int i) override
     {
         T old = grid_old.template getY<T>(i);
-        T new_val = old +this->Fluxterm(grid_old, i) *  (dt /dx )+this->equation.SourceTerms(old);
+        T new_val = old -this->Fluxterm(grid_old, i) *  (dt /dx )-this->equation.SourceTerms(old);
         return new_val;
     }
 

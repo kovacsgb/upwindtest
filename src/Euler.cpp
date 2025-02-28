@@ -40,7 +40,7 @@ std::array<Euler,1> EulerEquation::AdvectionCoeffs(Euler inputval)
     return std::array<Euler,1>{coeff};
 }
 
-double EulerEquation::getSoundSpeed(Euler inputval)
+double EulerEquation::getSoundSpeed(const Euler inputval)
 {
     return sqrt(1.4*inputval.getp()/inputval.getrho());
 }

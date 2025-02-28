@@ -26,7 +26,7 @@ Transport TransportEquation::SourceTerms(Transport inputval)
     return 0.0;
 }
 
-double TransportEquation::getSoundSpeed(Transport inputval)
+double TransportEquation::getSoundSpeed(const Transport inputval)
 {
     return this->getv();
 }

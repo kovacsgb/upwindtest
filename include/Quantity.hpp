@@ -3,6 +3,7 @@
 
 #include <array>
 #include <memory>
+#include <iostream>
 template <int N>
 class Quantity
 {
@@ -10,7 +11,7 @@ protected:
     std::array<double, N> data;
 public:
     Quantity() = default;
-    Quantity(Quantity const &) = default;
+    Quantity(Quantity const & q_) : data(q_.data) {}
     Quantity(Quantity &&) = default;
     Quantity(std::array<double, N> data) : data(data) {}
     Quantity(double data) {
@@ -121,7 +122,7 @@ public:
     Euler(Euler &&) = default;
     Euler &operator=(Euler const &) = default;
     Euler &operator=(Euler &&) = default;
-    virtual ~Euler() noexcept = default;
+    virtual ~Euler()  = default;
     Euler(double r, double p, double e) : Quantity<3>() {
         data[0] = r;
         data[1] = p;
@@ -134,9 +135,9 @@ public:
         return std::make_unique<Euler>(this->data);
     }
 
-    double getrho() { return data[0]; }
-    double getu() { return data[1] / data[0]; }
-    double getp() { return (data[2] - 0.5 * data[1] * data[1] / data[0]) * (2./3.); }
+    double getrho() const { return data[0]; }
+    double getu() const  { return data[1] / data[0]; }
+    double getp() const { return (data[2] - 0.5 * data[1] * data[1] / data[0]) * (2./3.); }
     
     Euler operator+(const Euler& other) const
     {
@@ -206,7 +207,7 @@ class Transport : public Quantity<1>
 {
 public:
     Transport() = default;
-    Transport(Transport const &) = default;
+    Transport(Transport const & Tr) : Quantity<1>(Tr.data) {};
     Transport(Transport &&) = default;
     Transport &operator=(Transport const &) = default;
     Transport &operator=(Transport &&) = default;
@@ -217,10 +218,11 @@ public:
     Transport(double r) : Quantity<1>() {
         data[0] = r;
     }
-    double getrho() { return data[0]; }
+    double getrho() const { return data[0]; }
 
     std::unique_ptr<Quantity<1>> clone() override
     {
+       // std::cerr << "Transport clone" << std::endl;
         return std::make_unique<Transport>(this->data[0]);
     }
 

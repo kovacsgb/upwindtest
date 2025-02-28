@@ -56,7 +56,7 @@ class Upwind : public Flux<T,N,M>
             for(auto k=0; k< M; k++)
             {
                 const double& c = coeff[k];
-                if (c > 0)
+                if (c < 0)
                 {
                     F_imhalf[j][k] =  std::get<1>(right[j])[k];
                 }
@@ -83,7 +83,7 @@ class Upwind : public Flux<T,N,M>
             for(auto k=0;k<M;k++)
             {
                 const double& c= coeff[k];
-                if (c > 0)
+                if (c < 0)
                 {
                     F_iphalf[j][k] =  std::get<1>(right[j])[k];
                 }
