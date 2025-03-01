@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 template <typename T, int N, int M>
 class CFL
 {
@@ -32,10 +33,10 @@ public:
         {
 
             const T& q = grid.template getY<T>(i);
-            std::cerr << q[0] << std::endl;
+            //std::cerr << q[0] << std::endl;
             max_sound_speed = std::max(max_sound_speed, equation.getSoundSpeed(q));
         }
-        
+        std::cerr << "Max sound speed: " << max_sound_speed << std::endl;
         return cfl * dx / max_sound_speed;
     }
 
@@ -69,6 +70,7 @@ public:
     //Solver(Grid<N> grid, double dx, CFL_calc CFL, SolvStep step_)
      {
         std::cerr << "Solver constructor" << std::endl;
+        std::cerr << "delta x: " << dx << std::endl;
         /*grid_old = grid;
         grid_new = grid;
         this->dx = dx;
@@ -90,7 +92,7 @@ public:
         while (t < t1)
         {
             double dt = CFL(grid_old, dx);
-            std::cerr << "Time: " << t0 << t1 << std::endl;
+            std::cerr << std::scientific << std::setprecision(8) << "Time: " << t <<" " << dt << " " <<t1 << std::endl;
             for (int i = grid_old.startid(); i < grid_old.size(); i++)
             {
                 grid_new.template getY<T>(i) = step(grid_old, dx, dt, i);
@@ -106,9 +108,10 @@ public:
 
             output_transport << std::endl;
 
-            //grid_new.updateBoundary(step.getEquation());
+            grid_new.updateBoundary(step.getEquation());
             grid_old = grid_new;
             t += dt;
+            
         }
     }
 

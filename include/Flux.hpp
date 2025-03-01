@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <numeric>
 #include <array>
+#include <iostream>
 
 template <typename T, int N, int M>
 class Flux {
@@ -32,7 +33,16 @@ public:
         std::array<T,N> F_j; 
         size_t j=0;
         std::transform(F_iphalf.begin(), F_iphalf.end(), F_imhalf.begin(), F_j.begin(), [&](const auto& a, const auto& b) {
-            return a * coeffs[j] - b * coeffs[j++];
+            /*if(i==2)
+            {std::cerr << a[0] << " " << b[0] << std::endl;
+            std::cerr << coeffs[j][0] << std::endl;
+            std::cerr << (a*coeffs[j]-b*coeffs[j])[0] << std::endl;
+            std::cerr << "----------------" << std::endl;}*/
+            auto c=a * coeffs[j] - b * coeffs[j];
+            j++;
+           /* if(i==2)
+                {std::cerr << c[0] << std::endl;}*/
+            return c;
         });
         return std::accumulate(F_j.begin(), F_j.end(), T{0});
     }

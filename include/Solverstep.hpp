@@ -30,6 +30,14 @@ class explicitStep : public Solverstep<T,N,M>
     {
         T old = grid_old.template getY<T>(i);
         T new_val = old -this->Fluxterm(grid_old, i) *  (dt /dx )-this->equation.SourceTerms(old);
+        if (i == 2)
+        {
+            std::cerr << "Flux_term:" << this->Fluxterm(grid_old, i)[0] << std::endl;
+            std::cerr << "Old value:" << old[0] << std::endl;  
+            std::cerr << "New value:" << new_val[0] << std::endl;
+            std::cerr << "dt/dx" << dt/dx << std::endl;
+            
+        }
         return new_val;
     }
 

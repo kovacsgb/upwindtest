@@ -86,10 +86,10 @@ int main() {
     std::cout << "First test: Upwind with transport" << std::endl;
     std::cout << "---------------------------------" << std::endl;
     
-    Grid<1> grid_transport = Grid<1>::GenerateFromBorders(100000, 0.0, 10.0);
+    Grid<1> grid_transport = Grid<1>::GenerateFromBorders(500, 0.0, 5.0);
     std::vector<double> params_transport = {1.0, 0.5, 0.1};
-    //grid_transport.setupY(f_transport_gauss, params_transport);
-    grid_transport.setupY(f_transport_discont, {1.,0.5});
+    grid_transport.setupY(f_transport_gauss, params_transport);
+    //grid_transport.setupY(f_transport_discont, {1.,0.5});
     TransportEquation transport{0.5};
     grid_transport.updateBoundary(transport);
 
@@ -101,7 +101,7 @@ int main() {
     }
 
     Upwind<Transport,1,1> upwind{transport};
-    CFL<Transport,1,1>CFL_transport{0.1, transport};
+    CFL<Transport,1,1>CFL_transport{0.25, transport};
     explicitStep<Transport,1,1> step_transport{transport, upwind};
 
     std::cout << "CFL is called" << std::endl;
@@ -111,7 +111,7 @@ int main() {
 
 
     solver_transport.setT0(0.0);
-    solver_transport.setT1(10*CFL_transport(grid_transport, grid_transport.getDx()));
+    solver_transport.setT1(100*CFL_transport(grid_transport, grid_transport.getDx()));
     solver_transport.solve();
 
     std::ofstream output_transport{"out_transport.txt"};
