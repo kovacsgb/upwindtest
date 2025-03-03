@@ -8,15 +8,16 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 template <typename T, int N, int M>
 class CFL
 {
     private:
     double cfl;
-    EquationBase<T,M>& equation;
+    EquationBase<T,M,N>& equation;
 
 public:
-    CFL(double cfl, EquationBase<T,M>& equation) : cfl(cfl), equation(equation) {}
+    CFL(double cfl, EquationBase<T,M,N>& equation) : cfl(cfl), equation(equation) {}
 
     double operator()(Grid<N>& grid, double dx)
     {
@@ -34,9 +35,9 @@ public:
 
             const T& q = grid.template getY<T>(i);
             //std::cerr << q[0] << std::endl;
-            max_sound_speed = std::max(max_sound_speed, equation.getSoundSpeed(q));
+            max_sound_speed = std::max(max_sound_speed, equation.getSoundSpeed(q)+std::abs(equation.getAdvSpeed(q)));
         }
-        std::cerr << "Max sound speed: " << max_sound_speed << std::endl;
+        //std::cerr << "Max sound speed: " << max_sound_speed << std::endl;
         return cfl * dx / max_sound_speed;
     }
 
@@ -92,18 +93,19 @@ public:
         while (t < t1)
         {
             double dt = CFL(grid_old, dx);
-            std::cerr << std::scientific << std::setprecision(8) << "Time: " << t <<" " << dt << " " <<t1 << std::endl;
-            for (int i = grid_old.startid(); i < grid_old.size(); i++)
-            {
-                grid_new.template getY<T>(i) = step(grid_old, dx, dt, i);
-            }
-            
+            //std::cerr << std::scientific << std::setprecision(8) << "Time: " << t <<" " << dt << " " <<t1 << std::endl;
 
+            step(grid_old, grid_new, dx, dt);
             
             for (int i = 0; i < grid_new.totalsize(); i++)
             {
                 T transport = grid_new.template getY<T>(i);
-                output_transport << grid_new.getX(i) << " " << transport[0]  << std::endl;
+                output_transport << grid_new.getX(i);
+                for (int j = 0; j < N; j++)
+                {
+                    output_transport << " " << transport[j];
+                }
+                output_transport << std::endl;
             }
 
             output_transport << std::endl;
@@ -113,6 +115,8 @@ public:
             t += dt;
             
         }
+        std::cerr << std::scientific << std::setprecision(8) << "Time: " << t <<" " << dt << " " <<t1 << std::endl;
+
     }
 
     void setT0(double t0)

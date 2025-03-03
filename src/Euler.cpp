@@ -5,8 +5,9 @@ std::array<std::tuple<Euler,Euler>,1> EulerEquation::AdvectionTerms(Euler inputv
 {
     Euler terms;
     terms[0]=inputval[1];
-    terms[1]=2/3.*(inputval[1]*inputval[1]/inputval[0])+inputval[2];
-    terms[3]=5./3.*inputval[1]*inputval[2]/inputval[0]-1/3.*inputval[1]*inputval[1]/inputval[0];
+    terms[1]=2./3.*(inputval[1]*inputval[1]/inputval[0])+2./3.*inputval[2];
+    terms[3]=5./3.*inputval[1]*inputval[2]/inputval[0]
+            -1/3.*inputval[1]*inputval[1]*inputval[1]/(inputval[0]*inputval[0]);
 
     Euler coeff{1,1,1};
     return {std::make_tuple(coeff,terms)};
@@ -45,11 +46,20 @@ double EulerEquation::getSoundSpeed(const Euler inputval)
     return sqrt(1.4*inputval.getp()/inputval.getrho());
 }
 
-/*
-std::array<Euler,1> EulerEquation::AdvectionCoeffs(Euler inputval)
+
+double EulerEquation::getAdvSpeed(const Euler inputval)
 {
-    Euler coeff{1,1,1};
+    return inputval.getu();
+}
 
-    return std::array<Euler,1>{coeff};
-
+/*Euler with artificial diffusion */
+/*
+void EulerWithDiffusion::calc_PI(Grid<3>& grid)
+{
+    for (int i = grid.startid(); i < grid.size(); i++)
+    {
+        Euler qp1 = grid.getY<Euler>(i);
+        Euler qm1 = grid.getY<Euler>(i-1);
+        PI[i] = 0.25*this->xi*grid.getDx()*grid.getDx()*(qp1.getu()-qm1.getu());
+    }
 }*/

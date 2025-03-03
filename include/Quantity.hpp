@@ -129,6 +129,12 @@ public:
         data[2] = e;
     }
     Euler(std::array<double, 3> data) : Quantity<3>(data) {}
+    Euler(double r) : Quantity<3>() {
+        data[0] = r;
+        data[1] = r;
+        data[2] = r;
+    }
+
 
     std::unique_ptr<Quantity<3>> clone() override
     {

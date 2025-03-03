@@ -12,7 +12,7 @@
 #include "Quantity.hpp"
 #include "Equation.hpp"
 
-template<typename T,int N> class EquationBase;
+template<typename T,int N, int M> class EquationBase;
 
 template<int M>
 struct Grid
@@ -77,10 +77,10 @@ struct Grid
         auto end() { return x.end(); }
         void setupY(std::function<Quantity<M>*(double,std::vector<double>)> f, std::vector<double> params);
 
-        template<typename T, int L>
-        void updateBoundary(EquationBase<T,L>& eq)
+        template<typename T, int L, int K>
+        void updateBoundary(EquationBase<T,L,K>& eq)
         {
-            eq.template updateBoundary<M>(*this);
+            eq.updateBoundary(*this);
         }
 };
 
