@@ -37,7 +37,19 @@ Transport* f_transport_discont(double x, std::vector<double> params)
     Transport* q = new Transport();
     double A = params[0];
     double mu = params[1];
-    (*q)[0] = A ? x< mu :0;
+    (*q)[0] = x< mu ? A :0;
+
+    return q;
+}
+
+Transport* f_transport_discont_general(double x, std::vector<double> params)
+{
+    Transport* q = new Transport();
+    double A = params[0];
+    double B = params[1];
+    double mu = params[2];
+    //std::cerr << A << " " << B << " " << mu  << " " << x << " "<< (A ? x< mu : B) << std::endl;
+    (*q)[0] =x < mu ? A : B;
 
     return q;
 }
@@ -121,11 +133,6 @@ int main() {
     grid_transport.updateBoundary(transport);
 
 
-    for (int i=0; i<grid_transport.totalsize(); i++)
-    {
-        Transport transport = grid_transport.getY<Transport>(i);
-        std::cout << grid_transport.getX(i) << " " << transport[0] << std::endl;
-    }
 
     //Upwind<Transport,1,1> upwind{transport};
     vonLeer<Transport,1,1> upwind{transport};
@@ -169,12 +176,6 @@ int main() {
     BurgersEquation burgers;
     grid_burgers.updateBoundary(burgers);
 
-    for (int i = 0; i < grid_burgers.totalsize(); i++)
-    {
-        Transport transport = grid_burgers.getY<Transport>(i);
-        std::cout << grid_burgers.getX(i) << " " << transport[0] << std::endl;
-    }
-
     Upwind<Transport,1,1> upwind_burgers{burgers};
     vonLeer<Transport,1,1> vonLeer_burgers{burgers};
     CFL<Transport,1,1> CFL_burgers{0.25, burgers};
@@ -206,14 +207,44 @@ int main() {
         output_burgers << out_grid_burgers.getX(i) << " " << transport[0] << " " << transport_old[0]  << " " << transport_vonLeer[0]<< std::endl;
     }
 
+    std::cout << "Third test: Rarefaction fan" << std::endl;
+    std::cout << "---------------------------------" << std::endl;
+
+    grid_burgers.setupY(f_transport_discont_general, {0,1,0.5});
+ 
+    grid_burgers.updateBoundary(burgers);
+
+
+
+    std::cout << "CFL is called" << std::endl;
+    std::cout << CFL_burgers(grid_burgers, 0.01) << std::endl;
+    std::cout << "Start solver" << std::endl;
+    Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers2{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers};
+    Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers_vonLeer2{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers_vonLeer};
+    solver_burgers2.setT0(0.0);
+    solver_burgers2.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers2.solve();
+    solver_burgers_vonLeer2.setT0(0.0);
+    solver_burgers_vonLeer2.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers_vonLeer2.solve();
+
+
+    std::ofstream output_burgers2{"out_rarefaction_burgers.txt"};
+
+    out_grid_burgers = solver_burgers2.getGrid();
+    out_grid_burgers_vonLeer = solver_burgers_vonLeer2.getGrid();
+    for (int i = 0; i < out_grid_burgers.totalsize(); i++)
+    {
+        Transport transport = out_grid_burgers.getY<Transport>(i);
+        Transport transport_old = grid_burgers.getY<Transport>(i); 
+        Transport transport_vonLeer = out_grid_burgers_vonLeer.getY<Transport>(i);
+        output_burgers2 << out_grid_burgers.getX(i) << " " << transport[0] << " " << transport_old[0]  << " " << transport_vonLeer[0]<< std::endl;
+    }
 
 
 
 
-
-
-
-    std::cout<< "Third test: Sod shock tube" << std::endl;
+    std::cout<< "Fourth test: Sod shock tube" << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
     Grid<3> grid_sod = Grid<3>::GenerateFromBorders(200, -5, 5);
