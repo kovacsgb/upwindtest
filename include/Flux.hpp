@@ -10,6 +10,10 @@
 #include <array>
 #include <iostream>
 
+template<typename t, int N, int M>
+class DonorCell;
+
+
 template <typename T, int N, int M>
 class Flux {
 
@@ -45,7 +49,8 @@ public:
             return c;
         });
         return std::accumulate(F_j.begin(), F_j.end(), T{0});
-    }
+    } 
+    friend class DonorCell<T,N,M>;
 };
 
 template <typename T, int N, int M>
@@ -59,14 +64,14 @@ class Upwind : public Flux<T,N,M>
         size_t j=0;
         auto left = this->equations.AdvectionTerms(grid.template getY<T>(i-1));
         auto right = this->equations.AdvectionTerms(grid.template getY<T>(i));
-
+        auto velocity = 0.5*(this->equations.getAdvSpeed(grid.template getY<T>(i))+this->equations.getAdvSpeed(grid.template getY<T>(i-1)));
         for (const auto& coeff : coeffs)
         {
   
             for(auto k=0; k< M; k++)
             {
                 const double& c = coeff[k];
-                if (c < 0)
+                if (velocity < 0)
                 {
                     F_imhalf[j][k] =  std::get<1>(right[j])[k];
                 }
@@ -87,13 +92,13 @@ class Upwind : public Flux<T,N,M>
         size_t j=0;
         auto left = this->equations.AdvectionTerms(grid.template getY<T>(i));
         auto right = this->equations.AdvectionTerms(grid.template getY<T>(i+1));
-
+        auto velocity = 0.5*(this->equations.getAdvSpeed(grid.template getY<T>(i))+this->equations.getAdvSpeed(grid.template getY<T>(i+1)));
         for (const auto& coeff : coeffs)
         {
             for(auto k=0;k<M;k++)
             {
                 const double& c= coeff[k];
-                if (c < 0)
+                if (velocity < 0)
                 {
                     F_iphalf[j][k] =  std::get<1>(right[j])[k];
                 }
@@ -111,6 +116,7 @@ class Upwind : public Flux<T,N,M>
 
     public:
     Upwind(EquationBase<T,N,M>& equations) : Flux<T,N,M>(equations) {}
+    friend class DonorCell<T,N,M>;
 
 };
 
@@ -135,6 +141,14 @@ class vonLeer : public Flux<T,N,M>
 
     }
 
+    std::array<T,N> shockvell_calc(Grid<M>& grid, int i)
+    {
+        auto v_i=this->equations.getAdvSpeed(grid.template getY<T>(i));
+        auto v_ip1=this->equations.getAdvSpeed(grid.template getY<T>(i+1));
+
+        return std::array<T,N>{0.5*(v_i+v_ip1)};
+    }
+
     std::array<T,N> F_iphalf(Grid<M>& grid,const std::array<T,N>& coeffs, int i)   override
     {
         std::array<T,N> F_iphalf;
@@ -145,21 +159,21 @@ class vonLeer : public Flux<T,N,M>
 
         auto right = this->equations.AdvectionTerms(grid.template getY<T>(i+1)-delta_q_right);
         auto left = this->equations.AdvectionTerms(grid.template getY<T>(i)+delta_q_left);
-
+/*
         auto F_ip1=(this->equations.AdvectionTerms(grid.template getY<T>(i+1)));
         auto F_i=(this->equations.AdvectionTerms(grid.template getY<T>(i)));
         auto q_diff=grid.template getY<T>(i+1)-grid.template getY<T>(i);
-        
+        */
         auto v_i=this->equations.getAdvSpeed(grid.template getY<T>(i));
         auto v_ip1=this->equations.getAdvSpeed(grid.template getY<T>(i+1));
         auto qfac = v_i * v_ip1;
-
+/*
         for (auto l=0; l<N;l++)
         {
             for (auto k=0; k<M; k++)
             {
                 auto F_diff= std::get<1>(F_ip1[l])-std::get<1>(F_i[l]);
-                if (q_diff[k] !=0)
+                if (std::abs(q_diff[k]) >=1e-5)
                 {
                     shockvel[l][k] = F_diff[k]/q_diff[k];
                 }
@@ -169,23 +183,23 @@ class vonLeer : public Flux<T,N,M>
                 }
             }
         }
-
-
+*/
+        shockvel = shockvell_calc(grid,i);
         size_t j=0;
         for (const auto& coeff : coeffs)
         {
             
             for(auto k=0; k< M; k++)
             {
-                const double& c = coeff[k] ? j>0 :shockvel[j][k];
+                const double& c = shockvel[j][k];
                 //std::cerr<< qfac[k] << std::endl;
-                if(qfac>=0)
+                if(true)
                 {
-                    if (c < 0)
+                    if (c < 0 )//&& v_ip1 < 0)
                     {
                         F_iphalf[j][k] =  std::get<1>(right[j])[k];
                     }
-                    else
+                    else //if(c > 0 && v_i > 0)
                     {
                         F_iphalf[j][k] = std::get<1>(left[j])[k];
                     }
@@ -208,6 +222,7 @@ class vonLeer : public Flux<T,N,M>
 
     public:
     vonLeer(EquationBase<T,N,M>& equations) : Flux<T,N,M>(equations) {}
+    friend class DonorCell<T,N,M>;
 };
 
 template <typename T, int N, int M>
@@ -230,6 +245,62 @@ class Central : public Flux<T,N,M>
     }
     public:
     Central(EquationBase<T,N,M>& equations) : Flux<T,N,M>(equations) {}
+
+    friend class DonorCell<T,N,M>;
+};
+
+template<typename T, int N, int M>
+class DonorCell : public Flux<T,N,M>
+{
+    private:
+    Central<T,N,M> CS;
+    Flux<T,N,M>& BS;
+    std::array<T,N> F_iphalf(Grid<M>& grid,const std::array<T,N>& coeffs, int i)
+    {
+        auto v_i = this->equations.getAdvSpeed(grid.template getY<T>(i));
+        auto v_ip1 =  this->equations.getAdvSpeed(grid.template getY<T>(i+1));
+        auto v_iphalf = 0.5*(v_i + v_ip1);
+        auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i))+
+        this->equations.getSoundSpeed(grid.template getY<T>(i+1)));
+        
+        double theta = v_iphalf/cSound;
+        theta = (theta < 0.2) ? 0.2 : ((theta > 1) ? 1 : theta);
+        auto CS_arr=CS.F_iphalf(grid,coeffs,i);
+        auto BS_arr=BS.F_iphalf(grid,coeffs,i);
+
+        std::array<T,N> Final_F;
+        for (auto j=0;j<N;j++)
+        {
+            Final_F[j] = T{1-theta} * CS_arr[j] + T{theta} * BS_arr[j];
+        }
+
+        return Final_F;
+
+    }
+    std::array<T,N> F_imhalf(Grid<M>& grid,const std::array<T,N>& coeffs, int i)
+    {
+        auto v_i =  this->equations.getAdvSpeed(grid.template getY<T>(i));
+        auto v_im1 =  this->equations.getAdvSpeed(grid.template getY<T>(i-1));
+        auto v_imhalf = 0.5*(v_i + v_im1);
+        auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i))+
+        this->equations.getSoundSpeed(grid.template getY<T>(i-1)));
+        
+        double theta = v_imhalf/cSound;
+        theta = (theta < 0.2) ? 0.2 : ((theta > 1) ? 1 : theta);
+
+        auto CS_arr=CS.F_imhalf(grid,coeffs,i);
+        auto BS_arr=BS.F_imhalf(grid,coeffs,i);
+
+        std::array<T,N> Final_F;
+        for (auto j=0;j<N;j++)
+        {
+            Final_F[j] = T{1-theta} * CS_arr[j] + T{theta} * BS_arr[j];
+        }
+
+        return Final_F;
+    }
+    public:
+    DonorCell(EquationBase<T,N,M>& equations,Flux<T,N,M>& bs) : Flux<T,N,M>(equations), CS(equations), BS(bs)  {}
 };
 
 
@@ -259,7 +330,7 @@ class FluxWithViscosity : public Flux<Euler,1,3>
         Euler operator()(Grid<3>& grid, int i) override
         {
             auto F_j = Calc(grid,i);
-            double v_ip2=grid.getY<Euler>(i+1).getu();
+            /*double v_ip2=grid.getY<Euler>(i+1).getu();
             double v_ip1=grid.getY<Euler>(i+1).getu();
             double v_im2=grid.getY<Euler>(i-2).getu();
             double v_i= grid.getY<Euler>(i).getu();
@@ -277,7 +348,7 @@ class FluxWithViscosity : public Flux<Euler,1,3>
 
             if(v_ip1-v_im1<0)
             {
-                PI_i = 0.25 * xi * rho_i * (v_ip1-v_im1)*(v_ip1-v_im1)*grid.getDx()*grid.getDx();
+                PI_i =1* xi * rho_i * (v_ip1-v_im1)*(v_ip1-v_im1);
             }
             else
             {
@@ -285,7 +356,7 @@ class FluxWithViscosity : public Flux<Euler,1,3>
             }
             if(v_im1-v_im2<0)
             {
-                PI_im1=0.25 * xi *rho_im1* (v_i-v_im2)*(v_i-v_im2)*grid.getDx()*grid.getDx();
+                PI_im1=1 * xi *rho_im1* (v_i-v_im2)*(v_i-v_im2);
             }
             else
             {
@@ -293,7 +364,7 @@ class FluxWithViscosity : public Flux<Euler,1,3>
             }
             if(v_ip2-v_i<0)
             {
-                PI_ip1=0.25 * xi *rho_ip1* (v_ip2-v_i)*(v_ip2-v_i)*grid.getDx()*grid.getDx();
+                PI_ip1=0.25 * xi *rho_ip1* (v_ip2-v_i)*(v_ip2-v_i);
             }
             else
             {
@@ -303,10 +374,14 @@ class FluxWithViscosity : public Flux<Euler,1,3>
             double PI_iphalf=PI_i;//0.5*(PI_i+PI_ip1);
             double PI_imhalf=PI_im1;//0.5*(PI_i+PI_im1);
 
-            F_j[1] += PI_iphalf - PI_imhalf;
-            F_j[2] += v_iphalf* PI_iphalf - v_imhalf * PI_imhalf;
+            //F_j[0] -= 
+            F_j[1] -=  PI_i; // PI_iphalf - PI_imhalf;
+            F_j[2] -=   PI_i*v_i;//v_iphalf* PI_iphalf - v_imhalf * PI_imhalf;
 
-            return F_j;
+            return F_j;*/
+
+
+
         }
 };
 

@@ -77,12 +77,16 @@ struct Grid
         auto end() { return x.end(); }
         void setupY(std::function<Quantity<M>*(double,std::vector<double>)> f, std::vector<double> params);
 
+        auto getGrid(){return this->x;}
+        auto getData(){return this->y;}
+
         template<typename T, int L, int K>
         void updateBoundary(EquationBase<T,L,K>& eq)
         {
             eq.updateBoundary(*this);
         }
 };
+
 
 template <int M>
 Grid<M>::Grid(int N, int NGhost, double x0, double dx) : N(N), NGhost(NGhost), dx(dx)

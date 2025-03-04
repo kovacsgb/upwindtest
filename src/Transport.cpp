@@ -29,7 +29,7 @@ Transport TransportEquation::SourceTerms(Transport inputval)
 
 double TransportEquation::getSoundSpeed(const Transport inputval)
 {
-    return this->getv();
+    return std::abs(this->getv());
 }
 
 double TransportEquation::getAdvSpeed(const Transport inputval)

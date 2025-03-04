@@ -143,7 +143,7 @@ public:
 
     double getrho() const { return data[0]; }
     double getu() const  { return data[1] / data[0]; }
-    double getp() const { return (data[2] - 0.5 * data[1] * data[1] / data[0]) * (2./3.); }
+    double getp() const { return (data[2] - 0.5 * data[1] * data[1] / data[0]) * (2./5.); }
     
     Euler operator+(const Euler& other) const
     {

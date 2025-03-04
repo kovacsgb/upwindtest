@@ -142,6 +142,7 @@ public:
     void setGrid(Grid<N>& grid)
     {
         grid_old = grid;
+        grid_new = grid_old;
     }
     double getDx()
     {

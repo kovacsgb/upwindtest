@@ -5,6 +5,7 @@
 #include "Flux.hpp"
 #include "Solverstep.hpp"
 #include "Quantity.hpp"
+#include "Sod_exact.hpp"
 #include <cmath>
 #include <fstream>
 
@@ -69,13 +70,13 @@ Euler* f_Sod_shock_tube(double x, std::vector<double> params)
     {
         (*q)[0] = rhoL;
         (*q)[1] = rhoL * uL;
-        (*q)[2] = 3/2*pL + 0.5*rhoL*uL*uL;
+        (*q)[2] = 5./2.*pL + 0.5*rhoL*uL*uL;
     }
     else
     {
         (*q)[0] = rhoR;
         (*q)[1] = rhoR * uR;
-        (*q)[2] = 3/2*pR + 0.5*rhoR*uR*uR;
+        (*q)[2] = 5./2.*pR + 0.5*rhoR*uR*uR;
     }
 
     return q;
@@ -122,7 +123,7 @@ int main() {
     std::cout << testCFL(grid, 0.01) << std::endl;
     std::cout << "Hello, World!" << std::endl;
 
-    std::cout << "First test: Upwind with transport" << std::endl;
+    std::cout << "\nFirst test: Upwind with transport" << std::endl;
     std::cout << "---------------------------------" << std::endl;
     
     Grid<1> grid_transport = Grid<1>::GenerateFromBorders(500, 0.0, 5.0);
@@ -169,7 +170,7 @@ int main() {
         output_transport << out_grid.getX(i) << " " << transport[0]  << " " << transport_old[0] << " " << transport2[0] << std::endl;
     }
 
-    std::cout << "Second test: Burgers equation" << std::endl;
+    std::cout << "\nSecond test: Burgers equation" << std::endl;
     std::cout << "---------------------------------" << std::endl;
     Grid<1> grid_burgers = Grid<1>::GenerateFromBorders(500, 0.0, 5.0);
     grid_burgers.setupY(f_transport_discont, {1,0.5});
@@ -207,7 +208,7 @@ int main() {
         output_burgers << out_grid_burgers.getX(i) << " " << transport[0] << " " << transport_old[0]  << " " << transport_vonLeer[0]<< std::endl;
     }
 
-    std::cout << "Third test: Rarefaction fan" << std::endl;
+    std::cout << "\nThird test: Rarefaction fan" << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
     grid_burgers.setupY(f_transport_discont_general, {0,1,0.5});
@@ -242,13 +243,131 @@ int main() {
     }
 
 
-
-
-    std::cout<< "Fourth test: Sod shock tube" << std::endl;
+    std::cout<< "\nFourth test: Reverse linear transport" << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
-    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(200, -5, 5);
-    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.0};
+    Grid<1> grid_transport_rev = Grid<1>::GenerateFromBorders(500, 0.0, 5.0);
+
+    grid_transport_rev.setupY(f_transport_discont_general, {0.,1.,0.5});
+    TransportEquation transport_rev{-0.5};
+    grid_transport_rev.updateBoundary(transport_rev);
+
+    vonLeer<Transport,1,1> vanleer_rev_trans{transport_rev};
+    CFL<Transport,1,1>CFL_transport_rev{0.25, transport_rev};
+    explicitStep<Transport,1,1> step_transport_rev{transport_rev, vanleer_rev_trans};
+
+    Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1>
+     solver_transport_rev_vonleer{grid_transport_rev, grid_transport_rev.getDx(), CFL_transport_rev, step_transport_rev};
+
+     solver_transport_rev_vonleer.setT0(0.0);
+     solver_transport_rev_vonleer.setT1(200*CFL_transport_rev(grid_transport_rev, grid_transport_rev.getDx()));
+     solver_transport_rev_vonleer.solve();
+
+    Upwind<Transport,1,1> upwind_transport_rev{transport_rev};
+    explicitStep<Transport,1,1> step_transport_rev2{transport_rev, upwind_transport_rev};
+    Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_transport_rev_upwind{grid_transport_rev, grid_transport_rev.getDx(), CFL_transport_rev, step_transport_rev2};
+    solver_transport_rev_upwind.setT0(0.0);
+    solver_transport_rev_upwind.setT1(200*CFL_transport_rev(grid_transport_rev, grid_transport_rev.getDx()));
+    solver_transport_rev_upwind.solve();
+
+
+    std::ofstream output_transport_rev{"out_transport_rev.txt"};
+
+     out_grid=solver_transport_rev_vonleer.getGrid();
+     out_grid2=solver_transport_rev_upwind.getGrid();
+    for (int i = 0; i < out_grid.totalsize(); i++)
+    {
+        Transport transport = out_grid.getY<Transport>(i);
+        Transport transport_old = grid_transport_rev.getY<Transport>(i);
+        Transport transport2 = out_grid2.getY<Transport>(i);
+        output_transport_rev << out_grid.getX(i) << " " << transport[0]  << " " << transport_old[0] << " " << transport2[0] << std::endl;
+    }
+
+
+    std::cout<< "\nFifth test: Reverse Burgers Riemann" << std::endl;
+    std::cout << "---------------------------------" << std::endl;
+
+
+   // Grid<1> grid_burgers = Grid<1>::GenerateFromBorders(500, 0.0, 5.0);
+    grid_burgers.setupY(f_transport_discont_general, {0,-1,2.5});
+    grid_burgers.updateBoundary(burgers);
+
+    //Upwind<Transport,1,1> upwind_burgers{burgers};
+    //vonLeer<Transport,1,1> vonLeer_burgers{burgers};
+    //CFL<Transport,1,1> CFL_burgers{0.25, burgers};
+    //explicitStep<Transport,1,1> step_burgers{burgers, upwind_burgers};
+    //explicitStep<Transport,1,1> step_burgers_vonLeer{burgers, vonLeer_burgers};
+
+    solver_burgers.setGrid(grid_burgers);
+    solver_burgers_vonLeer.setGrid(grid_burgers);
+
+    //Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers};
+    //Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers_vonLeer{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers_vonLeer};
+    solver_burgers.setT0(0.0);
+    solver_burgers.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers.solve();
+    solver_burgers_vonLeer.setT0(0.0);
+    solver_burgers_vonLeer.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers_vonLeer.solve();
+
+
+    std::ofstream output_burgers_rev{"out_burgers_rev.txt"};
+
+    out_grid_burgers = solver_burgers.getGrid();
+    out_grid_burgers_vonLeer = solver_burgers_vonLeer.getGrid();
+    for (int i = 0; i < out_grid_burgers.totalsize(); i++)
+    {
+        Transport transport = out_grid_burgers.getY<Transport>(i);
+        Transport transport_old = grid_burgers.getY<Transport>(i); 
+        Transport transport_vonLeer = out_grid_burgers_vonLeer.getY<Transport>(i);
+        output_burgers_rev << out_grid_burgers.getX(i) << " " << transport[0] << " " << transport_old[0]  << " " << transport_vonLeer[0]<< std::endl;
+    }
+
+ 
+
+
+    std::cout<< "\nSixth test: Reverse Rarefaction" << std::endl;
+    std::cout << "---------------------------------" << std::endl;
+
+
+    grid_burgers.setupY(f_transport_discont_general, {-1,0,2.5});
+    grid_burgers.updateBoundary(burgers);
+
+    solver_burgers.setGrid(grid_burgers);
+    solver_burgers_vonLeer.setGrid(grid_burgers);
+
+    //Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers};
+    //Solver<Transport, explicitStep<Transport,1,1>,CFL<Transport,1,1>,1> solver_burgers_vonLeer{grid_burgers, grid_burgers.getDx(), CFL_burgers, step_burgers_vonLeer};
+    solver_burgers.setT0(0.0);
+    solver_burgers.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers.solve();
+    solver_burgers_vonLeer.setT0(0.0);
+    solver_burgers_vonLeer.setT1(500 * CFL_burgers(grid_burgers, grid_burgers.getDx()));
+    solver_burgers_vonLeer.solve();
+
+
+    std::ofstream output_rarefaction_rev{"out_rarefaction_rev.txt"};
+
+    out_grid_burgers = solver_burgers.getGrid();
+    out_grid_burgers_vonLeer = solver_burgers_vonLeer.getGrid();
+    for (int i = 0; i < out_grid_burgers.totalsize(); i++)
+    {
+        Transport transport = out_grid_burgers.getY<Transport>(i);
+        Transport transport_old = grid_burgers.getY<Transport>(i); 
+        Transport transport_vonLeer = out_grid_burgers_vonLeer.getY<Transport>(i);
+        output_rarefaction_rev << out_grid_burgers.getX(i) << " " << transport[0] << " " << transport_old[0]  << " " << transport_vonLeer[0]<< std::endl;
+    }
+
+
+
+
+
+
+    std::cout<< "\nSeventh test: Sod shock tube" << std::endl;
+    std::cout << "---------------------------------" << std::endl;
+
+    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(150, 0, 1.5);
+    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.5};
     grid_sod.setupY(f_Sod_shock_tube, params_sod);
     //grid_sod.setupY(f, {1.0, 0.0,0.2});
     EulerEquation equation_sod;
@@ -264,29 +383,47 @@ int main() {
     }
 
     std::cout << "Set up solver" << std::endl;
-    vonLeer<Euler,1,3> upwind_sod(equation_sod);
-    FluxWithViscosity flux_with_visc(upwind_sod,4);
-    CFL<Euler,3,1> CFL_sod{0.1, equation_sod};
-    //explicitStep<Euler,1,3> step_sod{equation_sod, upwind_sod};
-    explicitStep<Euler,1,3> step_sod{equation_sod, flux_with_visc};
-    //Runge2Step<Euler,1,3> step_sod{equation_sod, flux_with_visc,grid_sod};
-    Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod{grid_sod, grid_sod.getDx(), CFL_sod, step_sod};
+    vonLeer<Euler,1,3> bs_sod(equation_sod);
+    Upwind<Euler,1,3> bs_uw_sod(equation_sod);
+    DonorCell<Euler,1,3> vonleer_sod(equation_sod,bs_sod);
+    DonorCell<Euler,1,3> upwind_sod(equation_sod,bs_uw_sod);
+   // FluxWithViscosity flux_with_visc(upwind_sod,0.1);
+    CFL<Euler,3,1> CFL_sod{0.25, equation_sod};
+   //explicitStep<Euler,1,3> step_sod{equation_sod, upwind_sod};
+    explicitStep<Euler,1,3> step_sod{equation_sod, upwind_sod};
+    explicitStep<Euler,1,3> step_vl_sod{equation_sod, vonleer_sod};
+    //Runge2Step<Euler,1,3> step_sod{equation_sod, vonleer_sod,grid_sod};
+    Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod_uw{grid_sod, grid_sod.getDx(), CFL_sod, step_sod};
+    Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod_vl{grid_sod, grid_sod.getDx(), CFL_sod, step_vl_sod};
     //Solver<Euler, Runge2Step<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod{grid_sod, grid_sod.getDx(), CFL_sod, step_sod};
 
-    solver_sod.setT0(0.0);
-    solver_sod.setT1(1.7);
-    solver_sod.solve();
+
+    solver_sod_uw.setT0(0.0);
+    solver_sod_uw.setT1(0.2);
+    solver_sod_uw.solve();
+    solver_sod_vl.setT0(0.0);
+    solver_sod_vl.setT1(0.2);
+    solver_sod_vl.solve();
 
     std::ofstream output_sod{"out_sod.txt"};
 
-    auto out_grid_sod=solver_sod.getGrid();
-    for (int i = 0; i < out_grid_sod.totalsize(); i++)
+    auto out_grid_sod_uw=solver_sod_uw.getGrid();
+    auto out_grid_sod_vl=solver_sod_vl.getGrid();
+    for (int i = 0; i < out_grid_sod_uw.totalsize(); i++)
     {
-        Euler euler = out_grid_sod.getY<Euler>(i);
-        output_sod << out_grid_sod.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp() << std::endl;
+        Euler euler = out_grid_sod_uw.getY<Euler>(i);
+        Euler vl = out_grid_sod_vl.getY<Euler>(i);
+        output_sod << out_grid_sod_uw.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp()
+                   << " " << vl.getrho() << " " << vl.getu() << " " << vl.getp() << std::endl;
     }
 
+    auto out_exact = SOD_exact(grid_sod.getGrid(),params_sod,0.2,1.4);
 
+    std::ofstream sod_solution{"out_sod_exact.txt"};
+    for (int i=0; i < grid_sod.totalsize();i++)
+    {
+        sod_solution << grid_sod.getX(i) << " " << out_exact[i][0] << " " << out_exact[i][1] << " " << out_exact[i][2] << std::endl;
+    }
 
     return 0;
 }
