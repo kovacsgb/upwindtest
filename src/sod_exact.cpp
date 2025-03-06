@@ -72,14 +72,17 @@ std::vector<std::array<double,3>> SOD_exact(std::vector<double> X_arr,std::vecto
     double Beta = (gamma-1)/2/gamma;
     //Calculate iteratively P3
 
+    auto cs_calc = [&gamma](double p,double rho){return std::sqrt(gamma*p/rho);};
 
 
     double P3 = secant_method(P3_func,Pl,Pr,{gamma,Pl,rhol,Pr,rhor});
+
 
     double rho3 = rhol*std::pow(P3/Pl,1/gamma);
     
     double v3 = vr + (P3-Pr)/std::sqrt(0.5*rhor*((gamma+1)*P3+(gamma-1)*Pr));
 
+    double c3 = cs_calc(P3,rho3);
 
     double P4 = P3;
 
@@ -87,27 +90,30 @@ std::vector<std::array<double,3>> SOD_exact(std::vector<double> X_arr,std::vecto
 
     double v4 = v3;
 
+    double c4 = cs_calc(P4,rho4);
+
     //rarefaction fan functions
 
     auto v2   = [=](double x){return 2./(gamma+1)* (cs_l+ (x-x_center)/t);};
     auto P2   = [=](double x){return Pl * std::pow(1- 0.5* (gamma-1)* v2(x)/cs_l,1./Beta);};
     auto rho2 = [=](double x){return rhol* std::pow(1- 0.5*(gamma-1) * v2(x)/cs_l,2./(gamma-1));};
 
+
     //calculate shock velocities
 
-    double c12 = cs_l;
-    double c23 = 0;
+    double c12 = vl-cs_l;
+    double c23 = v3-c3;
     double c34 = (rho4*v4-rho3*v3)/(rho4-rho3);
-    double c45 = (rhor*vr - rho4*v4)/(rhor-rho4);
+    double c45 = vr+cs_r*std::sqrt( 1+(gamma+1)/(2*gamma)*(P4/Pr-1) );//cs_r+(rhor*vr - rho4*v4)/(rhor-rho4);
 
 
     //contact positions
 
-    double x_12 = x_center - c12*t;
+    double x_12 = x_center + c12*t;
     double x_23 = x_center + c23 *t;
     double x_34 = x_center + c34*t;
     double x_45 = x_center + c45*t;
-
+    std::cout << "CS=" << c12 << " " << c23 << " " << c34 << " " << c45 << std::endl;
     std::cout << "Borders are:" << x_12 << " " << x_23 << " " << x_34 << " " << x_45 << std::endl; 
     std::vector<std::array<double,3>> output{X_arr.size(),{0,0,0}};
 

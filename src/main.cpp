@@ -122,7 +122,7 @@ int main() {
     CFL<Euler,3,1> testCFL{0.5, equation};
     std::cout << testCFL(grid, 0.01) << std::endl;
     std::cout << "Hello, World!" << std::endl;
-
+/*
     std::cout << "\nFirst test: Upwind with transport" << std::endl;
     std::cout << "---------------------------------" << std::endl;
     
@@ -359,15 +359,15 @@ int main() {
     }
 
 
-
+*/
 
 
 
     std::cout<< "\nSeventh test: Sod shock tube" << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
-    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(150, 0, 1.5);
-    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.5};
+    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(80, -1, 1);
+    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.0};
     grid_sod.setupY(f_Sod_shock_tube, params_sod);
     //grid_sod.setupY(f, {1.0, 0.0,0.2});
     EulerEquation equation_sod;
@@ -417,7 +417,7 @@ int main() {
                    << " " << vl.getrho() << " " << vl.getu() << " " << vl.getp() << std::endl;
     }
 
-    auto out_exact = SOD_exact(grid_sod.getGrid(),params_sod,0.2,1.4);
+    auto out_exact = SOD_exact(Grid<3>::GenerateFromBorders(200,-1,1).getGrid(),params_sod,0.2,1.4);
 
     std::ofstream sod_solution{"out_sod_exact.txt"};
     for (int i=0; i < grid_sod.totalsize();i++)
