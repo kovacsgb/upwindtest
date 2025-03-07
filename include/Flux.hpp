@@ -234,7 +234,7 @@ class Central : public Flux<T,N,M>
         std::array<T,N> Fp1half;
         for (const auto& Val :this->equations.AdvectionTerms(grid.template getY<T>(i+1)))
         {
-            Fp1half[j] =  std::get<1>(Val);
+            Fp1half[j] = std::get<1>(Val)*0.5;
             j++; 
         }
         return Fp1half;
@@ -260,10 +260,11 @@ class DonorCell : public Flux<T,N,M>
         auto v_i = this->equations.getAdvSpeed(grid.template getY<T>(i));
         auto v_ip1 =  this->equations.getAdvSpeed(grid.template getY<T>(i+1));
         auto v_iphalf = 0.5*(v_i + v_ip1);
-        auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i))+
-        this->equations.getSoundSpeed(grid.template getY<T>(i+1)));
-        
-        double theta = v_iphalf/cSound;
+        //auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i))+
+        //this->equations.getSoundSpeed(grid.template getY<T>(i+1)));
+        auto cSound = this->equations.getSoundSpeed(grid.template getY<T>(i));
+
+        double theta = v_i/cSound;
         theta = (theta < 0.2) ? 0.2 : ((theta > 1) ? 1 : theta);
         auto CS_arr=CS.F_iphalf(grid,coeffs,i);
         auto BS_arr=BS.F_iphalf(grid,coeffs,i);
@@ -282,10 +283,11 @@ class DonorCell : public Flux<T,N,M>
         auto v_i =  this->equations.getAdvSpeed(grid.template getY<T>(i));
         auto v_im1 =  this->equations.getAdvSpeed(grid.template getY<T>(i-1));
         auto v_imhalf = 0.5*(v_i + v_im1);
-        auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i))+
-        this->equations.getSoundSpeed(grid.template getY<T>(i-1)));
-        
-        double theta = v_imhalf/cSound;
+        //auto cSound = 0.5*( this->equations.getSoundSpeed(grid.template getY<T>(i));//)+
+        //this->equations.getSoundSpeed(grid.template getY<T>(i-1)));
+        auto cSound =this->equations.getSoundSpeed(grid.template getY<T>(i));
+
+        double theta = v_i/cSound;
         theta = (theta < 0.2) ? 0.2 : ((theta > 1) ? 1 : theta);
 
         auto CS_arr=CS.F_imhalf(grid,coeffs,i);

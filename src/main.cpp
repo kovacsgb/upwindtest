@@ -366,8 +366,8 @@ int main() {
     std::cout<< "\nSeventh test: Sod shock tube" << std::endl;
     std::cout << "---------------------------------" << std::endl;
 
-    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(80, -1, 1);
-    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.0};
+    Grid<3> grid_sod = Grid<3>::GenerateFromBorders(500, -5, 5);
+    std::vector<double> params_sod = {1.0, 0.0, 1.0, 0.125, 0.0, 0.1, 0.5};
     grid_sod.setupY(f_Sod_shock_tube, params_sod);
     //grid_sod.setupY(f, {1.0, 0.0,0.2});
     EulerEquation equation_sod;
@@ -383,46 +383,92 @@ int main() {
     }
 
     std::cout << "Set up solver" << std::endl;
-    vonLeer<Euler,1,3> bs_sod(equation_sod);
+    //vonLeer<Euler,1,3> bs_sod(equation_sod);
     Upwind<Euler,1,3> bs_uw_sod(equation_sod);
-    DonorCell<Euler,1,3> vonleer_sod(equation_sod,bs_sod);
+    //DonorCell<Euler,1,3> vonleer_sod(equation_sod,bs_sod);
     DonorCell<Euler,1,3> upwind_sod(equation_sod,bs_uw_sod);
    // FluxWithViscosity flux_with_visc(upwind_sod,0.1);
-    CFL<Euler,3,1> CFL_sod{0.25, equation_sod};
+    CFL<Euler,3,1> CFL_sod{0.1, equation_sod};
    //explicitStep<Euler,1,3> step_sod{equation_sod, upwind_sod};
     explicitStep<Euler,1,3> step_sod{equation_sod, upwind_sod};
-    explicitStep<Euler,1,3> step_vl_sod{equation_sod, vonleer_sod};
+
+   
+
+    //explicitStep<Euler,1,3> step_vl_sod{equation_sod, vonleer_sod};
     //Runge2Step<Euler,1,3> step_sod{equation_sod, vonleer_sod,grid_sod};
     Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod_uw{grid_sod, grid_sod.getDx(), CFL_sod, step_sod};
-    Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod_vl{grid_sod, grid_sod.getDx(), CFL_sod, step_vl_sod};
+    //Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod_vl{grid_sod, grid_sod.getDx(), CFL_sod, step_vl_sod};
     //Solver<Euler, Runge2Step<Euler,1,3>,CFL<Euler,3,1>,3> solver_sod{grid_sod, grid_sod.getDx(), CFL_sod, step_sod};
 
 
+    CFL<Euler,3,1> CFL_large{0.5,equation_sod};
+    CFL<Euler,3,1> CFL_middle{0.25,equation_sod};
+
+    Grid<3> sod_sparse = Grid<3>::GenerateFromBorders(80,-5,5);
+    sod_sparse.setupY(f_Sod_shock_tube,params_sod);
+
+    typedef Solver<Euler, explicitStep<Euler,1,3>,CFL<Euler,3,1>,3> SODSOLVER;
+
+    SODSOLVER Solve_sparse_large{sod_sparse, sod_sparse.getDx(),CFL_large,step_sod};
+    SODSOLVER Solve_sparse_middle{sod_sparse, sod_sparse.getDx(),CFL_middle,step_sod};
+    SODSOLVER Solve_sparse_low{sod_sparse, sod_sparse.getDx(),CFL_sod,step_sod};
+
+
+
+    double endT=1.4;
+    step_sod.setXi(2.5);
     solver_sod_uw.setT0(0.0);
-    solver_sod_uw.setT1(0.2);
+    solver_sod_uw.setT1(endT);
     solver_sod_uw.solve();
-    solver_sod_vl.setT0(0.0);
-    solver_sod_vl.setT1(0.2);
-    solver_sod_vl.solve();
+    step_sod.setXi(1);
+    Solve_sparse_large.setT0(0.0);
+    Solve_sparse_middle.setT0(0.0);
+    Solve_sparse_low.setT0(0.0);
+    Solve_sparse_large.setT1(endT);
+    Solve_sparse_middle.setT1(endT);
+    Solve_sparse_low.setT1(endT);
 
-    std::ofstream output_sod{"out_sod.txt"};
+    Solve_sparse_large.solve();
+    Solve_sparse_middle.solve();
+    Solve_sparse_low.solve();
 
-    auto out_grid_sod_uw=solver_sod_uw.getGrid();
-    auto out_grid_sod_vl=solver_sod_vl.getGrid();
-    for (int i = 0; i < out_grid_sod_uw.totalsize(); i++)
-    {
-        Euler euler = out_grid_sod_uw.getY<Euler>(i);
-        Euler vl = out_grid_sod_vl.getY<Euler>(i);
-        output_sod << out_grid_sod_uw.getX(i) << " " << euler.getrho() << " " << euler.getu() << " " << euler.getp()
-                   << " " << vl.getrho() << " " << vl.getu() << " " << vl.getp() << std::endl;
+
+
+    //solver_sod_vl.setT0(0.0);
+    //solver_sod_vl.setT1(endT);
+    //solver_sod_vl.solve();
+
+    std::ofstream output_sod_dense{"out_sod_dense.txt"};
+    std::ofstream output_sod_sparse{"out_sod_sparse.txt"};
+
+    auto out_grid_sod_uw = solver_sod_uw.getGrid();
+    auto out_grid_sparse_large = Solve_sparse_large.getGrid();
+    auto out_grid_sparse_middle = Solve_sparse_middle.getGrid();
+    auto out_grid_sparse_low = Solve_sparse_low.getGrid();
+
+    for (int i = 0; i < out_grid_sod_uw.totalsize(); i++) {
+        Euler euler_uw = out_grid_sod_uw.getY<Euler>(i);
+        output_sod_dense << out_grid_sod_uw.getX(i) << " " 
+                         << euler_uw.getrho() << " " << euler_uw.getu() << " " << euler_uw.getp() << std::endl;
     }
 
-    auto out_exact = SOD_exact(Grid<3>::GenerateFromBorders(200,-1,1).getGrid(),params_sod,0.2,1.4);
+    for (int i = 0; i < out_grid_sparse_large.totalsize(); i++) {
+        Euler euler_sparse_large = out_grid_sparse_large.getY<Euler>(i);
+        Euler euler_sparse_middle = out_grid_sparse_middle.getY<Euler>(i);
+        Euler euler_sparse_low = out_grid_sparse_low.getY<Euler>(i);
+        output_sod_sparse << out_grid_sparse_large.getX(i) << " " 
+                          << euler_sparse_large.getrho() << " " << euler_sparse_large.getu() << " " << euler_sparse_large.getp() << " "
+                          << euler_sparse_middle.getrho() << " " << euler_sparse_middle.getu() << " " << euler_sparse_middle.getp() << " "
+                          << euler_sparse_low.getrho() << " " << euler_sparse_low.getu() << " " << euler_sparse_low.getp() << std::endl;
+    }
+
+    auto exact_i= Grid<3>::GenerateFromBorders(1000,-5,5).getGrid();
+    auto out_exact = SOD_exact(exact_i,params_sod,endT,1.4);
 
     std::ofstream sod_solution{"out_sod_exact.txt"};
-    for (int i=0; i < grid_sod.totalsize();i++)
+    for (int i=0; i < exact_i.size();i++)
     {
-        sod_solution << grid_sod.getX(i) << " " << out_exact[i][0] << " " << out_exact[i][1] << " " << out_exact[i][2] << std::endl;
+        sod_solution << exact_i[i]  << " " << out_exact[i][0] << " " << out_exact[i][1] << " " << out_exact[i][2] << std::endl;
     }
 
     return 0;

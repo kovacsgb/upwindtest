@@ -4,10 +4,10 @@
 std::array<std::tuple<Euler,Euler>,1> EulerEquation::AdvectionTerms(Euler inputval)
 {
     Euler terms;
-    terms[0]=inputval[1];
-    terms[1]=2./5.*(2*inputval[1]*inputval[1]/inputval[0]+inputval[2]);
-    terms[2]=7./5.*inputval[1]*inputval[2]/inputval[0]
-            -1/5.*inputval[1]*inputval[1]*inputval[1]/(inputval[0]*inputval[0]);
+    terms[0]=inputval.getrho()*inputval.getu();//inputval[1];
+    terms[1]=inputval.getrho()*inputval.getu()*inputval.getu()+inputval.getp();//2./5.*(2*inputval[1]*inputval[1]/inputval[0]+inputval[2]);
+    terms[2]=(inputval.getp()/(0.4)+inputval.getp()+0.5*inputval.getrho()*inputval.getu()*inputval.getu())*inputval.getu();//7./5.*inputval[1]*inputval[2]/inputval[0]
+            //-1/5.*inputval[1]*inputval[1]*inputval[1]/(inputval[0]*inputval[0]);
 
     Euler coeff{1,1,1};
     return {std::make_tuple(coeff,terms)};

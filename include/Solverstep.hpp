@@ -98,6 +98,7 @@ class explicitStep : public Solverstep<T,N,M>
     private:
     std::ofstream debug_out{"out_fluxes"};
 
+    double xi=1;
     public:
 
     explicitStep(EquationBase<T,N,M>& equation, Flux<T,N,M>& Fluxterm) : Solverstep<T,N,M>{Fluxterm,equation} {}
@@ -130,7 +131,7 @@ class explicitStep : public Solverstep<T,N,M>
                 T old_i = grid_old.template getY<T>(i);
                 T vis_val = apply_visc<M,T>(grid_old,i);
 
-                T new_val = old_i +  vis_val  * (1*dt/dx);
+                T new_val = old_i +  vis_val  * (xi*dt/dx);
                 grid_new.template getY<T>(i) = new_val;
             }
         }
@@ -148,6 +149,13 @@ class explicitStep : public Solverstep<T,N,M>
             
         }*/
         //return new_val;
+    }
+    void setXi(double new_xi) {
+        xi = new_xi;
+    }
+
+    double getXi() const {
+        return xi;
     }
 
 };
